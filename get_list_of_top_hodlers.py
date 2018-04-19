@@ -83,6 +83,6 @@ if __name__ == "__main__":
     # We have found all of our addresses and balances (yay!). Time to write to a csv
     address_csv = open('top_addresses.csv', 'w')
     address_writer = csv.writer(address_csv, quoting=csv.QUOTE_ALL)
-
+    address_writer.writerow([start_block])
     for hodler in reversed(sorted_list):
         address_writer.writerow(hodler.as_list())
