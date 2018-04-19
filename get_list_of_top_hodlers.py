@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
             start_block += 1
     except:
-        continue
+        pass
 
 
     # We have found all of our addresses and balances (yay!). Time to write to a csv

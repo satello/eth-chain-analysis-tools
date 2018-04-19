@@ -24,12 +24,13 @@ def rpc_request(method, params = [], key = None):
 
 def blocknumber_binary_search(target_date):
     # fetch top block
-    upper_bound = int(rpc_request(BLOCK_NUMBER, []), 16)
+    #upper_bound = int(rpc_request(BLOCK_NUMBER, []), 16)
+    upper_bound = 4989123
     print(upper_bound)
     # lower bound is genesis block
     lower_bound = 0
 
-    current_block = int(upper_bound - 1) # start with block at half height
+    current_block = int(upper_bound / 2) # start with block at half height
 
     target_timestamp = int(target_date.timestamp()) # timestamp for target date
 
