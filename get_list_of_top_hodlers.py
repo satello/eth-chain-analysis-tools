@@ -55,6 +55,7 @@ if __name__ == "__main__":
     end_block = int(rpc_request(BLOCK_NUMBER, []), 16)
     try:
         while (start_block <= end_block):
+            time.sleep(0.001)
             txs = rpc_request(method=GET_BLOCK, params=[hex(start_block), True], key='transactions')
             for tx in txs:
                 # we consider an address active if it sent or received eth in the last year
@@ -66,6 +67,7 @@ if __name__ == "__main__":
                         continue
                     if not seen_addresses.get(addr, None):
                         # We haven't seen this address yet, add to list
+                        time.sleep(0.001)
                         balance = int(rpc_request(method=GET_BALANCE, params=[addr, 'latest']), 16)
                         seen_addresses[addr] = balance
                         # if list length is less than limit or value is higher than the lowest element
