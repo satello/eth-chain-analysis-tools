@@ -8,6 +8,7 @@ import argparse
 
 from pymongo import MongoClient
 from tools.mongo import initMongo, insertMongo, highestBlock
+from tools.blocks import decodeBlock
 
 BLOCK_NUMBER = 'eth_blockNumber'
 GET_BLOCK = "eth_getBlockByNumber"
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     start_block = int(args['start'])
     end_block = int(rpc_request(BLOCK_NUMBER, []), 16)
 
-    mongo_client = initMongo(Client())
+    mongo_client = initMongo(MongoClient())
     highest_mongo = highestBlock(mongo_client)
 
     if highest_mongo > start_block:
@@ -61,7 +62,7 @@ if __name__ == "__main__":
         # fetch block
         block = rpc_request(method=GET_BLOCK, params=[hex(start_block), True])
         # add to mongo
-        insertMongo(mongo_client, block)
+        insertMongo(mongo_client, decodeBlock(block))
 
         start_block += 1
 
