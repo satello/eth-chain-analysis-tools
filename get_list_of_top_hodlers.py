@@ -3,6 +3,8 @@ import csv
 import bisect
 import requests
 import json
+import time
+import argparse
 
 NUMBER_OF_HOLDERS = 1000000
 BLOCK_NUMBER = 'eth_blockNumber'
@@ -45,17 +47,47 @@ def rpc_request(method, params = [], key = None):
     return res['result'][key] if key else res['result']
 
 if __name__ == "__main__":
-    start_block = int(sys.argv[1])
-    if not start_block:
-        raise RuntimeError("provide a start block")
+    ap = argparse.ArgumentParser()
+    ap.add_argument('-c', '--csv', required = False, help = 'Subscribers CSV to cross reference')
+    ap.add_argument('-s', '--start-block', required = False, help = 'CSV of twitter followers screen names')
 
+    args = vars(ap.parse_args())
+    start_block = 0
     seen_addresses = {}
     sorted_list = list()
 
+    if not args['csv'] and not args['start-block']:
+        raise RuntimeError("provide a start block (-s) or a csv (-c)")
+
+    if args['csv']:
+        with open(args['csv']) as f:
+            reader = csv.reader(f)
+            start_block = int(next(reader))
+            # now populate seen addresses and sorted list
+            for row in reader:
+                address = row[0]
+                balance = int(row[1])
+
+                seen_addresses[address] = balance
+                sorted_list.append(Hodler(address, balance))
+
+            # it will populate in reverse order
+            sorted_list = reversed(sorted_list)
+
     end_block = int(rpc_request(BLOCK_NUMBER, []), 16)
+
+    # set up basic progress bar
+    sys.stdout.write("  %")
+    sys.stdout.flush()
+
     try:
         while (start_block <= end_block):
             time.sleep(0.001)
+            # write progress to bar
+            sys.stdout.write("\b" * (4))
+            sys.stdout.write("%d" % int(start_block / end_block))
+            sys.stdout.flush()
+            # do the work
             txs = rpc_request(method=GET_BLOCK, params=[hex(start_block), True], key='transactions')
             for tx in txs:
                 # we consider an address active if it sent or received eth in the last year
@@ -67,18 +99,19 @@ if __name__ == "__main__":
                         continue
                     if not seen_addresses.get(addr, None):
                         # We haven't seen this address yet, add to list
-                        time.sleep(0.001)
-                        balance = int(rpc_request(method=GET_BALANCE, params=[addr, 'latest']), 16)
+                        balance = int(rpc_request(method=GET_BALANCE, params=[addr, hex(end_block)]), 16)
                         seen_addresses[addr] = balance
                         # if list length is less than limit or value is higher than the lowest element
                         if balance > 0 and (
                             len(sorted_list) < NUMBER_OF_HOLDERS or balance > seen_addresses.get(sorted_list[0].balance)
                         ):
-                            hodler = Hodler(addr, balance)
-                            bisect.insort(sorted_list, hodler)
+                            del sorted_list[0] # remove first item in list
+                            hodler = Hodler(addr, balance) # create new hodler
+                            bisect.insort(sorted_list, hodler) # insert hodler
 
             start_block += 1
-    except:
+    except e:
+        print(e)
         pass
 
 
