@@ -62,17 +62,14 @@ if __name__ == "__main__":
     if args['csv']:
         with open(args['csv']) as f:
             reader = csv.reader(f)
-            start_block = int(next(reader))
+            start_block = int(next(reader)[0])
             # now populate seen addresses and sorted list
             for row in reader:
                 address = row[0]
                 balance = int(row[1])
 
                 seen_addresses[address] = balance
-                sorted_list.append(Hodler(address, balance))
-
-            # it will populate in reverse order
-            sorted_list = reversed(sorted_list)
+                sorted_list.insert(0, Hodler(address, balance))
 
     end_block = int(rpc_request(BLOCK_NUMBER, []), 16)
 
@@ -110,8 +107,8 @@ if __name__ == "__main__":
                             bisect.insort(sorted_list, hodler) # insert hodler
 
             start_block += 1
-    except e:
-        print(e)
+    except:
+        print(sys.exc_info()[0])
         pass
 
 
