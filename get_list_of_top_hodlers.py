@@ -82,7 +82,7 @@ if __name__ == "__main__":
             time.sleep(0.001)
             # write progress to bar
             sys.stdout.write("\b" * (4))
-            sys.stdout.write("%d" % int(start_block / end_block))
+            sys.stdout.write("%d" % int((start_block / end_block) * 100))
             sys.stdout.flush()
             # do the work
             txs = rpc_request(method=GET_BLOCK, params=[hex(start_block), True], key='transactions')
