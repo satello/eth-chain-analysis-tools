@@ -82,7 +82,7 @@ if __name__ == "__main__":
         end_block = int(rpc_request(BLOCK_NUMBER, []), 16)
 
     mongo_client = initMongo(MongoClient())
-    block_queue = makeBlockQueue(mongo_client)
+    block_queue = makeBlockQueue(mongo_client, start_block)
     block_number = None
 
     # set up basic progress bar
