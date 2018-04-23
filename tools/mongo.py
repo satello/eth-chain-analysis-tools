@@ -81,7 +81,7 @@ def highestBlock(client):
     return n["number"]
 
 
-def makeBlockQueue(client):
+def makeBlockQueue(client, start_block):
     """
     Form a queue of blocks that are recorded in mongo.
 
@@ -94,7 +94,7 @@ def makeBlockQueue(client):
     <deque>
     """
     queue = deque()
-    all_n = client.find({}, {"number":1, "_id":0},
+    all_n = client.find({"number": { "$gte": start_block}},
     		sort=[("number", pymongo.ASCENDING)])
     for i in all_n:
         queue.append(i["number"])

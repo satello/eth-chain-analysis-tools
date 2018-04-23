@@ -24,9 +24,7 @@ def rpc_request(method, params = [], key = None):
 
 def blocknumber_binary_search(target_date):
     # fetch top block
-    #upper_bound = int(rpc_request(BLOCK_NUMBER, []), 16)
-    upper_bound = 4989123
-    print(upper_bound)
+    upper_bound = int(rpc_request(BLOCK_NUMBER, []), 16)
     # lower bound is genesis block
     lower_bound = 0
 
@@ -34,7 +32,6 @@ def blocknumber_binary_search(target_date):
 
     target_timestamp = int(target_date.timestamp()) # timestamp for target date
 
-    print(hex(current_block))
     current_block_timestamp = rpc_request(GET_BLOCK, [hex(current_block), False], 'timestamp')
     while (current_block_timestamp != target_timestamp and current_block < upper_bound and current_block > lower_bound):
 
@@ -45,12 +42,13 @@ def blocknumber_binary_search(target_date):
             upper_bound = current_block
 
         current_block = upper_bound - ((upper_bound - lower_bound) // 2)
-        print(current_block)
         current_block_timestamp = rpc_request(GET_BLOCK, [hex(current_block), False], 'timestamp')
 
     return current_block
 
 if __name__ == "__main__":
-    target = datetime.datetime.now() - datetime.timedelta(days=365)
+    target = datetime.datetime(2017, 5, 1)
+    end = datetime.datetime(2018, 4, 23)
 
-    print(blocknumber_binary_search(target))
+    print("target start block: %d" % blocknumber_binary_search(target))
+    print("target end block: %d" % blocknumber_binary_search(end))

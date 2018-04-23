@@ -6,6 +6,10 @@ import json
 import time
 import argparse
 
+from pymongo import MongoClient
+
+from tools.mongo import initMongo, makeBlockQueue
+
 NUMBER_OF_HOLDERS = 1000000
 BLOCK_NUMBER = 'eth_blockNumber'
 GET_BALANCE = "eth_getBalance"
@@ -49,14 +53,15 @@ def rpc_request(method, params = [], key = None):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument('-c', '--csv', required = False, help = 'Subscribers CSV to cross reference')
-    ap.add_argument('-s', '--start-block', required = False, help = 'CSV of twitter followers screen names')
+    ap.add_argument('-s', '--start', required = False, help = 'Target start block')
+    ap.add_argument('-e', '--end', required = False, help = 'Target end block')
 
     args = vars(ap.parse_args())
     start_block = 0
     seen_addresses = {}
     sorted_list = list()
 
-    if not args['csv'] and not args['start-block']:
+    if not args['csv'] and not args['start']:
         raise RuntimeError("provide a start block (-s) or a csv (-c)")
 
     if args['csv']:
@@ -71,22 +76,30 @@ if __name__ == "__main__":
                 seen_addresses[address] = balance
                 sorted_list.insert(0, Hodler(address, balance))
 
-    end_block = int(rpc_request(BLOCK_NUMBER, []), 16)
+    if args['end']:
+        end_block = int(args['end'])
+    else:
+        end_block = int(rpc_request(BLOCK_NUMBER, []), 16)
+
+    mongo_client = initMongo(MongoClient())
+    block_queue = makeBlockQueue(mongo_client)
+    block_number = None
 
     # set up basic progress bar
     sys.stdout.write("  %")
     sys.stdout.flush()
 
     try:
-        while (start_block <= end_block):
-            time.sleep(0.001)
+        for block in block_queue:
+            block_number = block['number']
+            if block_number > end_block:
+                break
             # write progress to bar
             sys.stdout.write("\b" * (4))
-            sys.stdout.write("%d" % int((start_block / end_block) * 100))
+            sys.stdout.write("%d" % int((block_number / end_block) * 100))
             sys.stdout.flush()
             # do the work
-            txs = rpc_request(method=GET_BLOCK, params=[hex(start_block), True], key='transactions')
-            for tx in txs:
+            for tx in block['transactions']:
                 # we consider an address active if it sent or received eth in the last year
                 sender = tx["to"]
                 reciever = tx["from"]
@@ -105,8 +118,6 @@ if __name__ == "__main__":
                             del sorted_list[0] # remove first item in list
                             hodler = Hodler(addr, balance) # create new hodler
                             bisect.insort(sorted_list, hodler) # insert hodler
-
-            start_block += 1
     except:
         print(sys.exc_info()[0])
         pass
@@ -115,6 +126,6 @@ if __name__ == "__main__":
     # We have found all of our addresses and balances (yay!). Time to write to a csv
     address_csv = open('top_addresses.csv', 'w')
     address_writer = csv.writer(address_csv, quoting=csv.QUOTE_ALL)
-    address_writer.writerow([start_block])
+    address_writer.writerow([block_number])
     for hodler in reversed(sorted_list):
         address_writer.writerow(hodler.as_list())
