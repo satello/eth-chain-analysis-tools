@@ -5,6 +5,7 @@ import requests
 import json
 import time
 import argparse
+import traceback
 
 from pymongo import MongoClient
 
@@ -85,7 +86,7 @@ if __name__ == "__main__":
         end_block = int(rpc_request(BLOCK_NUMBER, []), 16)
 
     mongo_client = initMongo(MongoClient())
-    block_queue = makeBlockQueue(mongo_client, start_block)
+    block_queue = makeBlockQueue(mongo_client, start_block, end_block)
     block_number = None
 
     # set up basic progress bar
@@ -121,8 +122,8 @@ if __name__ == "__main__":
                             del sorted_list[0] # remove first item in list
                             hodler = Hodler(addr, balance) # create new hodler
                             bisect.insort(sorted_list, hodler) # insert hodler
-    except:
-        print(sys.exc_info()[0])
+    except Exception:
+        traceback.print_exc()
         pass
 
 
