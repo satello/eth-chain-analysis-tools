@@ -76,6 +76,9 @@ if __name__ == "__main__":
                 seen_addresses[address] = balance
                 sorted_list.insert(0, Hodler(address, balance))
 
+    if args['start']:
+        start_block = int(args['start'])
+
     if args['end']:
         end_block = int(args['end'])
     else:
