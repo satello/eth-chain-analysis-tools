@@ -61,7 +61,7 @@ if __name__ == "__main__":
         for i in range(start_block, end_block):
             time.sleep(0.001)
             block = rpc_request(method=GET_BLOCK, params=[hex(start_block), True])
-            block_number = block['number']
+            block_number = int(block['number'])
             if block_number > end_block:
                 break
             # write progress to bar
@@ -79,7 +79,7 @@ if __name__ == "__main__":
                         continue
                     if not seen_addresses.get(addr, None):
                         # We haven't seen this address yet, add to list
-                        balance = int(rpc_request(method=GET_BALANCE, params=[addr, hex(end_block)]), 16)
+                        balance = int(rpc_request(method=GET_BALANCE, params=[addr, 'latest']), 16)
                         seen_addresses[addr] = balance
                         # if list length is less than limit or value is higher than the lowest element
                         if balance > 0 and (

@@ -19,6 +19,8 @@ BLOCK_NUMBER = 'eth_blockNumber'
 GET_BALANCE = "eth_getBalance"
 GET_BLOCK = "eth_getBlockByNumber"
 
+# Did 345 iterations in 93 seconds
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument('-c', '--csv', required = False, help = 'Subscribers CSV to cross reference')
@@ -85,7 +87,7 @@ if __name__ == "__main__":
                             continue
                         if not seen_addresses.get(addr, None):
                             # We haven't seen this address yet, add to list
-                            balance = int(rpc_request(method=GET_BALANCE, params=[addr, hex(end_block)]), 16)
+                            balance = int(rpc_request(method=GET_BALANCE, params=[addr, 'latest']), 16)
                             seen_addresses[addr] = balance
                             # if list length is less than limit or value is higher than the lowest element
                             if balance > 0 and (
