@@ -4,8 +4,10 @@ Util functions for interacting with geth and mongo.
 Originally copied from https://github.com/alex-miller-0/Ethereum_Blockchain_Parser
 """
 import pymongo
-from collections import deque
 import os
+
+from pymongo.errors import AutoReconnect
+from collections import deque
 
 DB_NAME = "blockchain"
 COLLECTION = "blocks"
@@ -96,9 +98,18 @@ def makeBlockQueue(client, start_block, end_block):
     queue = deque()
     all_n = client.find({"number": {"$gte": start_block, "$lte": end_block}},
     		sort=[("number", pymongo.ASCENDING)])
-    print(all_n.count())
-    for i in all_n:
-        if i % 100 == 0:
-            print(i)
-        queue.append(i)
+
+    def process_blocks(cursor):
+        for i in all_n:
+            queue.append(i)
+
+    try:
+        process_blocks(all_n)
+    except AutoReconnect:
+        # start a new connection from the last item in the queue
+        last_block = queue.popleft()
+        print("restarting connection at block: %d" % last_block)
+        all_n = client.find({"number": {"$gte": last_block, "$lte": end_block}})
+        process_blocks(all_n)
+
     return queue
