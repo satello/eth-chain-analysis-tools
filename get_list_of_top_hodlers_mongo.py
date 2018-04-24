@@ -6,50 +6,18 @@ import json
 import time
 import argparse
 import traceback
+import time
 
 from pymongo import MongoClient
 
+from tools.rpc import rpc_request
+from tools.Hodler import Hodler
 from tools.mongo import initMongo, makeBlockQueue, getBlock
 
 NUMBER_OF_HOLDERS = 1000000
 BLOCK_NUMBER = 'eth_blockNumber'
 GET_BALANCE = "eth_getBalance"
 GET_BLOCK = "eth_getBlockByNumber"
-URL = "{}:{}".format("http://localhost", 8545)
-
-class Hodler:
-    def __init__(self, address, balance):
-        self.address = address
-        self.balance = balance
-
-    def __lt__(self, other):
-        return self.balance < other.balance
-
-    def __gt__(self, other):
-        return self.balance > other.balance
-
-    def __eq__(self, other):
-        return self.balance == other.balance
-
-    def as_list(self):
-        return [self.address, self.balance]
-
-
-def rpc_request(method, params = [], key = None):
-    """Make an RPC request to geth on port 8545."""
-    payload = {
-        "method": method,
-        "params": params,
-        "jsonrpc": "2.0",
-        "id": 0
-    }
-
-    res = requests.post(
-          URL,
-          data=json.dumps(payload),
-          headers={"content-type": "application/json"}).json()
-
-    return res['result'][key] if key else res['result']
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
@@ -86,16 +54,17 @@ if __name__ == "__main__":
         end_block = int(rpc_request(BLOCK_NUMBER, []), 16)
 
     mongo_client = initMongo(MongoClient())
-    # block_queue = makeBlockQueue(mongo_client, start_block, end_block)
+    block_queue = makeBlockQueue(mongo_client, start_block, end_block)
     block_number = None
 
     # set up basic progress bar
     sys.stdout.write("  %")
     sys.stdout.flush()
 
+    start_time = time.time()
     try:
-        for i in range(start_block, end_block):
-            block = getBlock(mongo_client, i)
+        for block in block_queue:
+            # block = getBlock(mongo_client, i)
             block_number = block['number']
             if block_number > end_block:
                 break
@@ -130,6 +99,8 @@ if __name__ == "__main__":
         pass
 
 
+    end_time = time.time()
+    print("Did %d iterations in %d seconds" % (block_number - start_block, end_time - start_time))
     # We have found all of our addresses and balances (yay!). Time to write to a csv
     address_csv = open('top_addresses.csv', 'w')
     address_writer = csv.writer(address_csv, quoting=csv.QUOTE_ALL)
