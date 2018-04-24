@@ -54,46 +54,48 @@ if __name__ == "__main__":
         end_block = int(rpc_request(BLOCK_NUMBER, []), 16)
 
     mongo_client = initMongo(MongoClient())
-    block_queue = makeBlockQueue(mongo_client, start_block, end_block)
     block_number = None
 
     # set up basic progress bar
     sys.stdout.write("  %")
     sys.stdout.flush()
 
+    batch_size = 15000
     start_time = time.time()
     try:
-        for block in block_queue:
-            # block = getBlock(mongo_client, i)
-            block_number = block['number']
-            if block_number > end_block:
-                break
-            # write progress to bar
-            sys.stdout.write("\b" * (4))
-            sys.stdout.write("%d" % int((block_number / end_block) * 100))
-            sys.stdout.flush()
-            # do the work
-            for tx in block['transactions']:
-                # we consider an address active if it sent or received eth in the last year
-                sender = tx["to"]
-                reciever = tx["from"]
-                # TODO check if contract 'eth_getCode'
-                for addr in [sender, reciever]:
-                    if not addr:
-                        continue
-                    if not seen_addresses.get(addr, None):
-                        # We haven't seen this address yet, add to list
-                        balance = int(rpc_request(method=GET_BALANCE, params=[addr, hex(end_block)]), 16)
-                        seen_addresses[addr] = balance
-                        # if list length is less than limit or value is higher than the lowest element
-                        if balance > 0 and (
-                            len(sorted_list) < NUMBER_OF_HOLDERS or balance > seen_addresses.get(sorted_list[0].balance)
-                        ):
-                            if len(sorted_list) >= NUMBER_OF_HOLDERS:
-                                del sorted_list[0] # remove first item in list
+        for i in range((end_block - start_block) / batch_size):
+            batch_start = start_block + (batch_size * i)
+            block_batch = makeBlockQueue(mongo_client, batch_start, batch_start + batch_size)
+            for block in block_batch:
+                block_number = block['number']
+                if block_number > end_block:
+                    break
+                # write progress to bar
+                sys.stdout.write("\b" * (4))
+                sys.stdout.write("%d" % int((block_number / end_block) * 100))
+                sys.stdout.flush()
+                # do the work
+                for tx in block['transactions']:
+                    # we consider an address active if it sent or received eth in the last year
+                    sender = tx["to"]
+                    reciever = tx["from"]
+                    # TODO check if contract 'eth_getCode'
+                    for addr in [sender, reciever]:
+                        if not addr:
+                            continue
+                        if not seen_addresses.get(addr, None):
+                            # We haven't seen this address yet, add to list
+                            balance = int(rpc_request(method=GET_BALANCE, params=[addr, hex(end_block)]), 16)
+                            seen_addresses[addr] = balance
+                            # if list length is less than limit or value is higher than the lowest element
+                            if balance > 0 and (
+                                len(sorted_list) < NUMBER_OF_HOLDERS or balance > seen_addresses.get(sorted_list[0].balance)
+                            ):
+                                if len(sorted_list) >= NUMBER_OF_HOLDERS:
+                                    del sorted_list[0] # remove first item in list
 
-                            hodler = Hodler(addr, balance) # create new hodler
-                            bisect.insort(sorted_list, hodler) # insert hodler
+                                hodler = Hodler(addr, balance) # create new hodler
+                                bisect.insort(sorted_list, hodler) # insert hodler
     except Exception:
         traceback.print_exc()
         pass

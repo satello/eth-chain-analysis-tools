@@ -90,6 +90,8 @@ def makeBlockQueue(client, start_block, end_block):
     """
     Form a queue of blocks that are recorded in mongo.
 
+    Can handle roughly 20,000 at one time due to memory constraints
+
     Params:
     -------
     client <mongodb Client>
@@ -98,15 +100,9 @@ def makeBlockQueue(client, start_block, end_block):
     --------
     <deque>
     """
-    batch_size = 10000
-    queue = deque()
-
-    for i in ((end_block - start_block) / batch_size):
-        if (i * batch_size + start_block > end_block):
-            break
-        all_n = client.find({"number": {"$gte": start_block + (i * batch_size), "$lte": start_block + ((i+1) * batch_size)}},
-        		sort=[("number", pymongo.ASCENDING)])
-        for i in all_n:
-            queue.append(i)
+    all_n = client.find({"number": {"$gte": start_block, "$lte": end_block)}},
+            sort=[("number", pymongo.ASCENDING)])
+    for i in all_n:
+        queue.append(i)
 
     return queue
