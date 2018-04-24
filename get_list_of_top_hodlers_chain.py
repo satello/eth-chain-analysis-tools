@@ -60,7 +60,7 @@ if __name__ == "__main__":
     try:
         for i in range(start_block, end_block):
             time.sleep(0.001)
-            block = rpc_request(method=GET_BLOCK, params=[hex(start_block), True])
+            block = rpc_request(method=GET_BLOCK, params=[hex(i), True])
             block_number = int(block['number'], 16)
             if block_number > end_block:
                 break
