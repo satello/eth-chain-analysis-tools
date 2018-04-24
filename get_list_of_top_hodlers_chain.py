@@ -61,7 +61,7 @@ if __name__ == "__main__":
         for i in range(start_block, end_block):
             time.sleep(0.001)
             block = rpc_request(method=GET_BLOCK, params=[hex(start_block), True])
-            block_number = int(block['number'])
+            block_number = int(block['number'], 16)
             if block_number > end_block:
                 break
             # write progress to bar
