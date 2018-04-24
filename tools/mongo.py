@@ -83,6 +83,9 @@ def highestBlock(client):
     return n["number"]
 
 
+def getBlock(clent, block_number):
+    return client.find_one({"number": block_number})
+
 def makeBlockQueue(client, start_block, end_block):
     """
     Form a queue of blocks that are recorded in mongo.
@@ -95,21 +98,15 @@ def makeBlockQueue(client, start_block, end_block):
     --------
     <deque>
     """
+    batch_size = 10000
     queue = deque()
-    all_n = client.find({"number": {"$gte": start_block, "$lte": end_block}},
-    		sort=[("number", pymongo.ASCENDING)])
 
-    def process_blocks(cursor):
+    for i in ((end_block - start_block) / batch_size):
+        if (i * batch_size + start_block > end_block):
+            break
+        all_n = client.find({"number": {"$gte": start_block + (i * batch_size), "$lte": start_block + ((i+1) * batch_size)}},
+        		sort=[("number", pymongo.ASCENDING)])
         for i in all_n:
             queue.append(i)
-
-    try:
-        process_blocks(all_n)
-    except AutoReconnect:
-        # start a new connection from the last item in the queue
-        last_block = queue.popleft()
-        print("restarting connection at block: %d" % last_block)
-        all_n = client.find({"number": {"$gte": last_block, "$lte": end_block}})
-        process_blocks(all_n)
 
     return queue

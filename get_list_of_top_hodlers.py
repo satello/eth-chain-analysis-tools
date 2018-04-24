@@ -9,7 +9,7 @@ import traceback
 
 from pymongo import MongoClient
 
-from tools.mongo import initMongo, makeBlockQueue
+from tools.mongo import initMongo, makeBlockQueue, getBlock
 
 NUMBER_OF_HOLDERS = 1000000
 BLOCK_NUMBER = 'eth_blockNumber'
@@ -86,15 +86,16 @@ if __name__ == "__main__":
         end_block = int(rpc_request(BLOCK_NUMBER, []), 16)
 
     mongo_client = initMongo(MongoClient())
-    block_queue = makeBlockQueue(mongo_client, start_block, end_block)
-    block_number = None
+    # block_queue = makeBlockQueue(mongo_client, start_block, end_block)
+    # block_number = None
 
     # set up basic progress bar
     sys.stdout.write("  %")
     sys.stdout.flush()
 
     try:
-        for block in block_queue:
+        for i in range(start_block, end_block):
+            block = getBlock(mongo_client, i)
             block_number = block['number']
             if block_number > end_block:
                 break
