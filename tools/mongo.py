@@ -83,7 +83,7 @@ def highestBlock(client):
     return n["number"]
 
 
-def getBlock(clent, block_number):
+def getBlock(client, block_number):
     return client.find_one({"number": block_number})
 
 def makeBlockQueue(client, start_block, end_block):

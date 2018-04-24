@@ -87,7 +87,7 @@ if __name__ == "__main__":
 
     mongo_client = initMongo(MongoClient())
     # block_queue = makeBlockQueue(mongo_client, start_block, end_block)
-    # block_number = None
+    block_number = None
 
     # set up basic progress bar
     sys.stdout.write("  %")
@@ -114,7 +114,7 @@ if __name__ == "__main__":
                         continue
                     if not seen_addresses.get(addr, None):
                         # We haven't seen this address yet, add to list
-                        balance = int(rpc_request(method=GET_BALANCE, params=[addr]), 16)
+                        balance = int(rpc_request(method=GET_BALANCE, params=[addr, hex(end_block)]), 16)
                         seen_addresses[addr] = balance
                         # if list length is less than limit or value is higher than the lowest element
                         if balance > 0 and (
