@@ -113,13 +113,15 @@ if __name__ == "__main__":
                         continue
                     if not seen_addresses.get(addr, None):
                         # We haven't seen this address yet, add to list
-                        balance = int(rpc_request(method=GET_BALANCE, params=[addr, hex(end_block)]), 16)
+                        balance = int(rpc_request(method=GET_BALANCE, params=[addr]), 16)
                         seen_addresses[addr] = balance
                         # if list length is less than limit or value is higher than the lowest element
                         if balance > 0 and (
                             len(sorted_list) < NUMBER_OF_HOLDERS or balance > seen_addresses.get(sorted_list[0].balance)
                         ):
-                            del sorted_list[0] # remove first item in list
+                            if len(sorted_list) >= NUMBER_OF_HOLDERS:
+                                del sorted_list[0] # remove first item in list
+
                             hodler = Hodler(addr, balance) # create new hodler
                             bisect.insort(sorted_list, hodler) # insert hodler
     except Exception:

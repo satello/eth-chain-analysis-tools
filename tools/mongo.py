@@ -96,6 +96,9 @@ def makeBlockQueue(client, start_block, end_block):
     queue = deque()
     all_n = client.find({"number": {"$gte": start_block, "$lte": end_block}},
     		sort=[("number", pymongo.ASCENDING)])
+    print(all_n.count())
     for i in all_n:
-        queue.append(i["number"])
+        if i % 100 == 0:
+            print(i)
+        queue.append(i)
     return queue
