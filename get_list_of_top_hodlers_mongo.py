@@ -63,7 +63,7 @@ if __name__ == "__main__":
     batch_size = 15000
     start_time = time.time()
     try:
-        for i in range((end_block - start_block) / batch_size):
+        for i in range(int((end_block - start_block) / batch_size)):
             batch_start = start_block + (batch_size * i)
             block_batch = makeBlockQueue(mongo_client, batch_start, batch_start + batch_size)
             for block in block_batch:

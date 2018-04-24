@@ -100,7 +100,7 @@ def makeBlockQueue(client, start_block, end_block):
     --------
     <deque>
     """
-    all_n = client.find({"number": {"$gte": start_block, "$lte": end_block)}},
+    all_n = client.find({"number": {"$gte": start_block, "$lte": end_block}},
             sort=[("number", pymongo.ASCENDING)])
     for i in all_n:
         queue.append(i)
