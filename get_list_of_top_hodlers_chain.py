@@ -71,7 +71,7 @@ if __name__ == "__main__":
     start_time = time.time()
     try:
         for i in range(start_block, end_block):
-            if i % 1000:
+            if i % 1000 == 0:
                 # track progress and save where we are
                 save_progress(start_time, start_block, block_number, sorted_list)
 
@@ -106,3 +106,5 @@ if __name__ == "__main__":
     except Exception:
         traceback.print_exc()
         pass
+
+    save_progress(start_time, start_block, block_number, sorted_list)
