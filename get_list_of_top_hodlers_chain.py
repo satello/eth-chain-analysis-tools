@@ -16,10 +16,27 @@ BLOCK_NUMBER = 'eth_blockNumber'
 GET_BALANCE = "eth_getBalance"
 GET_BLOCK = "eth_getBlockByNumber"
 
+# make unique filename for this run
+FILE_NAME = 'top_addresses-%d.csv' % time.time()
+
+def save_progress(start_time, start_block, block_number, sorted_list):
+    end_time = time.time()
+    print('\n')
+    print("Did %d blocks in %d seconds" % (block_number - start_block, end_time - start_time))
+    print("Averaged %d seconds per tx" % (tx_count // (end_time - start_time)))
+    print("Averaged %d seconds per block" % ((block_number - start_block) // (end_time - start_time)))
+    print("Average tx's per block %d" % (tx_count // (block_number - start_block)))
+    print("last block processed %d" % block_number)
+    # We have found all of our addresses and balances (yay!). Time to write to a csv
+    address_csv = open(FILE_NAME, 'w')
+    address_writer = csv.writer(address_csv, quoting=csv.QUOTE_ALL)
+    for hodler in reversed(sorted_list):
+        address_writer.writerow(hodler.as_list())
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument('-c', '--csv', required = False, help = 'Subscribers CSV to cross reference')
-    ap.add_argument('-s', '--start', required = False, help = 'Target start block')
+    ap.add_argument('-c', '--csv', required = False, help = 'An existing csv of addresses and balances')
+    ap.add_argument('-s', '--start', required = True, help = 'Target start block')
     ap.add_argument('-e', '--end', required = False, help = 'Target end block')
 
     args = vars(ap.parse_args())
@@ -33,7 +50,6 @@ if __name__ == "__main__":
     if args['csv']:
         with open(args['csv']) as f:
             reader = csv.reader(f)
-            start_block = int(next(reader)[0])
             # now populate seen addresses and sorted list
             for row in reader:
                 address = row[0]
@@ -42,32 +58,29 @@ if __name__ == "__main__":
                 seen_addresses[address] = balance
                 sorted_list.insert(0, Hodler(address, balance))
 
-    if args['start']:
-        start_block = int(args['start'])
+    start_block = int(args['start'])
 
     if args['end']:
         end_block = int(args['end'])
     else:
         end_block = int(rpc_request(BLOCK_NUMBER, []), 16)
 
-    block_number = None
-
-    # set up basic progress bar
-    sys.stdout.write("  %")
-    sys.stdout.flush()
+    block_number = start_block
+    tx_count = 0
 
     start_time = time.time()
     try:
         for i in range(start_block, end_block):
-            time.sleep(0.001)
+            if i % 1000:
+                # track progress and save where we are
+                save_progress(start_time, start_block, block_number, sorted_list)
+
+            block_number = i
             block = rpc_request(method=GET_BLOCK, params=[hex(i), True])
-            block_number = int(block['number'], 16)
             if block_number > end_block:
                 break
-            # write progress to bar
-            sys.stdout.write("\b" * (4))
-            sys.stdout.write("%d" % int((block_number / end_block) * 100))
-            sys.stdout.flush()
+
+            tx_count += len(block['transactions'])
             # do the work
             for tx in block['transactions']:
                 # we consider an address active if it sent or received eth in the last year
@@ -93,13 +106,3 @@ if __name__ == "__main__":
     except Exception:
         traceback.print_exc()
         pass
-
-
-    end_time = time.time()
-    print("Did %d iterations in %d seconds" % (block_number - start_block, end_time - start_time))
-    # We have found all of our addresses and balances (yay!). Time to write to a csv
-    address_csv = open('top_addresses.csv', 'w')
-    address_writer = csv.writer(address_csv, quoting=csv.QUOTE_ALL)
-    address_writer.writerow([block_number])
-    for hodler in reversed(sorted_list):
-        address_writer.writerow(hodler.as_list())
