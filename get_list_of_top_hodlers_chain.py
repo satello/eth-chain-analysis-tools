@@ -23,9 +23,9 @@ def save_progress(start_time, start_block, block_number, sorted_list):
     end_time = time.time()
     print('\n')
     print("Did %d blocks in %d seconds" % (block_number - start_block, end_time - start_time))
-    print("Averaged %d seconds per tx" % (tx_count // (end_time - start_time)))
-    print("Averaged %d seconds per block" % ((block_number - start_block) // (end_time - start_time)))
-    print("Average tx's per block %d" % (tx_count // (block_number - start_block)))
+    print("Averaged %d seconds per tx" % (float(tx_count) / (end_time - start_time)))
+    print("Averaged %d seconds per block" % (float(block_number - start_block) / (end_time - start_time)))
+    print("Average tx's per block %d" % (float(tx_count) / (block_number - start_block)))
     print("last block processed %d" % block_number)
     # We have found all of our addresses and balances (yay!). Time to write to a csv
     address_csv = open(FILE_NAME, 'w')
