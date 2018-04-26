@@ -95,6 +95,8 @@ def process_block(block_number):
     global seen_addresses
     global address_processing_queue
 
+    session = requests.Session()
+
     try:
         start_process = time.time()
         current_estimate_block = block_number
