@@ -123,7 +123,7 @@ def process_block(block_number):
                 ), address_list))
 
                 for response in await asyncio.gather(*futures):
-                    addr = response.request.body['params'][0]
+                    addr = json.loads(response.request.body)['params'][0]
                     print(addr)
                     resp = response.json()
                     balance = int(resp['result'], 16)
