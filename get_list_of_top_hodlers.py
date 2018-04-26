@@ -123,8 +123,8 @@ def process_block(block_number):
                 ), address_list))
 
                 for response in await asyncio.gather(*futures):
-                    print(response.request)
-                    print(response.request.data)
+                    attrs = vars(response.request)
+                    print(', '.join("%s: %s" % item for item in attrs.items()))
                     resp = response.json()
                     balance = int(resp['result'], 16)
                     seen_addresses[addr] = balance
