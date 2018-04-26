@@ -4,7 +4,6 @@ import bisect
 import requests
 import json
 import time
-import datetime
 import argparse
 import traceback
 import asyncio
@@ -18,7 +17,7 @@ BLOCK_NUMBER = 'eth_blockNumber'
 GET_BALANCE = "eth_getBalance"
 GET_BLOCK = "eth_getBlockByNumber"
 URL = "{}:{}".format("http://localhost", 8545)
-THREAD_COUNT = 200
+THREAD_COUNT = 1
 CSV_NAME = 'top_addresses_%d.csv' % time.time()
 # global variables
 seen_addresses = {}
@@ -100,6 +99,7 @@ def process_block():
     global address_processing_queue
 
     session = requests.Session()
+
     try:
         while running:
             start_process = time.time()
@@ -107,6 +107,30 @@ def process_block():
             current_estimate_block = block_number
             txs = rpc_request(session=session, method=GET_BLOCK, params=[hex(block_number), True], key='transactions')
             print("Block number %d has %d txs" % (block_number, len(txs)))
+
+            async def fetch_address_balances(address_list):
+                with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+                    loop = asyncio.get_event_loop()
+                    futures = list(map(lambda addr: loop.run_in_executor(
+                        executor,
+                        requests.post,
+                        URL,
+                        headers={"content-type": "application/json"},
+                        payload=json.dumps({
+                            "method": GET_BALANCE,
+                            "params": [addr, hex(end_block)],
+                            "jsonrpc": "2.0",
+                            "id": 0
+                        })
+                    ), address_list))
+
+                    for response in await asyncio.gather(*futures):
+                        balance = int(response['result'], 16)
+                        seen_addresses[addr] = balance
+                        # add to queue to process list writes and deletions on a single thread
+                        address_processing_queue.put((addr, balance))
+
+            addresses_to_fetch_balance = []
             for tx in txs:
                 # we consider an address active if it sent or received eth in the last year
                 sender = tx["to"]
@@ -116,11 +140,10 @@ def process_block():
                     if not addr:
                         continue
                     if not seen_addresses.get(addr, None):
-                        # We haven't seen this address yet, add to list
-                        balance = int(rpc_request(session=session, method=GET_BALANCE, params=[addr, hex(end_block)]), 16)
-                        seen_addresses[addr] = balance
-                        # add to queue to process list writes and deletions on a single thread
-                        address_processing_queue.put((addr, balance))
+                        addresses_to_fetch_balance.append(addr)
+
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(fetch_address_balances(addresses_to_fetch_balance))
             task_queue.task_done()
             end_process = time.time()
 
