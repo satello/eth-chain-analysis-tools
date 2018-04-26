@@ -92,7 +92,7 @@ def process_address_tuple():
         traceback.print_exc()
         running = False
 
-def process_block(loop):
+def process_block():
     global running
     global current_estimate_block
     global seen_addresses
@@ -100,7 +100,8 @@ def process_block(loop):
     global task_queue
 
     session = requests.Session()
-
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     while running:
         try:
             start_process = time.time()
@@ -221,9 +222,8 @@ if __name__ == "__main__":
     list_worker.daemon = True
     list_worker.start()
     # worker threads (async)
-    loop = asyncio.get_event_loop()
     for i in range(THREADS):
-        t = Thread(target=process_block, args=(loop, ))
+        t = Thread(target=process_block)
         t.daemon = True
         t.start()
     # thread for reporting
