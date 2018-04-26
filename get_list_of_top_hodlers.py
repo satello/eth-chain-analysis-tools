@@ -113,7 +113,7 @@ def process_block(block_number):
                         requests.post,
                         URL,
                         headers={"content-type": "application/json"},
-                        payload=json.dumps({
+                        data=json.dumps({
                             "method": GET_BALANCE,
                             "params": [addr, hex(end_block)],
                             "jsonrpc": "2.0",
