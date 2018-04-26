@@ -74,7 +74,8 @@ def process_address_tuple():
     if balance > 0 and (
         len(sorted_list) < NUMBER_OF_HOLDERS or balance > sorted_list[0].balance
     ):
-        del sorted_list[0] # remove first item in list
+        if len(sorted_list) >= NUMBER_OF_HOLDERS:
+            del sorted_list[0] # remove first item in list
         hodler = Hodler(address, balance) # create new hodler
         bisect.insort(sorted_list, hodler) # insert hodler
     address_processing_queue.task_done()
@@ -102,7 +103,8 @@ def process_block():
 
 # thread that reports on the progress every n seconds
 def report_snapshot():
-    sleep_time = 1800
+    global last_reported_block
+    sleep_time = 30
     while running:
         # every half hour report on progress and write results in case of program failure
         print("Current Estimated block: %d" % current_estimate_block)
