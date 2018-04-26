@@ -7,6 +7,8 @@ import time
 import datetime
 import argparse
 import traceback
+import asyncio
+import concurrent.futures
 from threading import Thread
 from queue import Queue
 
@@ -48,7 +50,7 @@ class Hodler:
         return [self.address, self.balance]
 
 
-def rpc_request(method, params = [], key = None):
+def rpc_request(session, method, params = [], key = None):
     """Make an RPC request to geth on port 8545."""
     payload = {
         "method": method,
@@ -57,7 +59,7 @@ def rpc_request(method, params = [], key = None):
         "id": 0
     }
 
-    res = requests.post(
+    res = session.post(
           URL,
           data=json.dumps(payload),
           headers={"content-type": "application/json"}).json()
@@ -96,12 +98,14 @@ def process_block():
     global current_estimate_block
     global seen_addresses
     global address_processing_queue
+
+    session = requests.Session()
     try:
         while running:
             start_process = time.time()
             block_number = task_queue.get()
             current_estimate_block = block_number
-            txs = rpc_request(method=GET_BLOCK, params=[hex(block_number), True], key='transactions')
+            txs = rpc_request(session=session, method=GET_BLOCK, params=[hex(block_number), True], key='transactions')
             print("Block number %d has %d txs" % (block_number, len(txs)))
             for tx in txs:
                 # we consider an address active if it sent or received eth in the last year
@@ -113,7 +117,7 @@ def process_block():
                         continue
                     if not seen_addresses.get(addr, None):
                         # We haven't seen this address yet, add to list
-                        balance = int(rpc_request(method=GET_BALANCE, params=[addr, hex(end_block)]), 16)
+                        balance = int(rpc_request(session=session, method=GET_BALANCE, params=[addr, hex(end_block)]), 16)
                         seen_addresses[addr] = balance
                         # add to queue to process list writes and deletions on a single thread
                         address_processing_queue.put((addr, balance))
@@ -185,7 +189,7 @@ if __name__ == "__main__":
     if args['end']:
         end_block = int(args['end'])
     else:
-        end_block = int(rpc_request(BLOCK_NUMBER, []), 16)
+        end_block = int(rpc_request(requests.Session(), BLOCK_NUMBER, []), 16)
 
     # create task queue of size of all blocks
     task_queue = Queue(end_block - start_block)
