@@ -16,7 +16,7 @@ BLOCK_NUMBER = 'eth_blockNumber'
 GET_BALANCE = "eth_getBalance"
 GET_BLOCK = "eth_getBlockByNumber"
 URL = "{}:{}".format("http://localhost", 8545)
-THREAD_COUNT = 1
+THREAD_COUNT = 200
 CSV_NAME = 'top_addresses_%d.csv' % time.time()
 # global variables
 seen_addresses = {}
@@ -57,13 +57,10 @@ def rpc_request(method, params = [], key = None):
         "id": 0
     }
 
-    request_start = time.time()
     res = requests.post(
           URL,
           data=json.dumps(payload),
           headers={"content-type": "application/json"}).json()
-    request_end = time.time()
-    print('%s took %d seconds' % (method, request_end - request_start))
 
     if not res.get('result'):
         running = False
@@ -105,7 +102,7 @@ def process_block():
             block_number = task_queue.get()
             current_estimate_block = block_number
             txs = rpc_request(method=GET_BLOCK, params=[hex(block_number), True], key='transactions')
-            print("Block number %d has %d txs", (block_number, len(txs)))
+            print("Block number %d has %d txs" % (block_number, len(txs)))
             for tx in txs:
                 # we consider an address active if it sent or received eth in the last year
                 sender = tx["to"]
@@ -123,7 +120,7 @@ def process_block():
             task_queue.task_done()
             end_process = time.time()
 
-            print('Processing block took %d seconds' % (end_process - start_process))
+            print('Processing block %d took %d seconds' % (block_number, end_process - start_process))
     except:
         traceback.print_exc()
         running = False
