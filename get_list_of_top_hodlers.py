@@ -7,6 +7,7 @@ import time
 import argparse
 import traceback
 import asyncio
+import functools
 import concurrent.futures
 from threading import Thread
 from queue import Queue
@@ -108,15 +109,17 @@ def process_block(block_number):
                 loop = asyncio.get_event_loop()
                 futures = list(map(lambda addr: loop.run_in_executor(
                     executor,
-                    requests.post,
-                    URL,
-                    headers={"content-type": "application/json"},
-                    payload=json.dumps({
-                        "method": GET_BALANCE,
-                        "params": [addr, hex(end_block)],
-                        "jsonrpc": "2.0",
-                        "id": 0
-                    })
+                    functools.partial(
+                        func=requests.post,
+                        URL,
+                        headers={"content-type": "application/json"},
+                        payload=json.dumps({
+                            "method": GET_BALANCE,
+                            "params": [addr, hex(end_block)],
+                            "jsonrpc": "2.0",
+                            "id": 0
+                        })
+                    )
                 ), address_list))
 
                 for response in await asyncio.gather(*futures):
