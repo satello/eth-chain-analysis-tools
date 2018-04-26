@@ -142,8 +142,9 @@ def process_block():
                     if not seen_addresses.get(addr, None):
                         addresses_to_fetch_balance.append(addr)
 
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(fetch_address_balances(addresses_to_fetch_balance))
+            # loop = asyncio.get_event_loop()
+            # loop.run_until_complete(fetch_address_balances(addresses_to_fetch_balance))
+            await fetch_address_balances(addresses_to_fetch_balance)
             task_queue.task_done()
             end_process = time.time()
 
