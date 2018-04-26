@@ -63,7 +63,7 @@ def rpc_request(method, params = [], key = None):
           data=json.dumps(payload),
           headers={"content-type": "application/json"}).json()
     request_end = time.time()
-    print('%s took %d seconds' % (request_end - request_start))
+    print('%s took %d seconds' % (method, request_end - request_start))
 
     if not res.get('result'):
         running = False
