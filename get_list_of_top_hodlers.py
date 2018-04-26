@@ -110,7 +110,7 @@ def process_block(block_number):
                 futures = list(map(lambda addr: loop.run_in_executor(
                     executor,
                     functools.partial(
-                        func=requests.post,
+                        requests.post,
                         URL,
                         headers={"content-type": "application/json"},
                         payload=json.dumps({
