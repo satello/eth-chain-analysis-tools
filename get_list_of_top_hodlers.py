@@ -17,12 +17,10 @@ BLOCK_NUMBER = 'eth_blockNumber'
 GET_BALANCE = "eth_getBalance"
 GET_BLOCK = "eth_getBlockByNumber"
 URL = "{}:{}".format("http://localhost", 8545)
-THREAD_COUNT = 1
 CSV_NAME = 'top_addresses_%d.csv' % time.time()
 # global variables
 seen_addresses = {}
 sorted_list = list()
-task_queue = None
 address_processing_queue = None
 end_block = None
 start_block = 0
@@ -91,64 +89,57 @@ def process_address_tuple():
         traceback.print_exc()
         running = False
 
-def process_block():
+def process_block(block_number):
     global running
-    global task_queue
     global current_estimate_block
     global seen_addresses
     global address_processing_queue
 
-    session = requests.Session()
-
     try:
-        while running:
-            start_process = time.time()
-            block_number = task_queue.get()
-            current_estimate_block = block_number
-            txs = rpc_request(session=session, method=GET_BLOCK, params=[hex(block_number), True], key='transactions')
-            print("Block number %d has %d txs" % (block_number, len(txs)))
+        start_process = time.time()
+        current_estimate_block = block_number
+        txs = rpc_request(session=session, method=GET_BLOCK, params=[hex(block_number), True], key='transactions')
+        print("Block number %d has %d txs" % (block_number, len(txs)))
 
-            async def fetch_address_balances(address_list):
-                with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-                    loop = asyncio.get_event_loop()
-                    futures = list(map(lambda addr: loop.run_in_executor(
-                        executor,
-                        requests.post,
-                        URL,
-                        headers={"content-type": "application/json"},
-                        payload=json.dumps({
-                            "method": GET_BALANCE,
-                            "params": [addr, hex(end_block)],
-                            "jsonrpc": "2.0",
-                            "id": 0
-                        })
-                    ), address_list))
+        async def fetch_address_balances(address_list):
+            with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+                loop = asyncio.get_event_loop()
+                futures = list(map(lambda addr: loop.run_in_executor(
+                    executor,
+                    requests.post,
+                    URL,
+                    headers={"content-type": "application/json"},
+                    payload=json.dumps({
+                        "method": GET_BALANCE,
+                        "params": [addr, hex(end_block)],
+                        "jsonrpc": "2.0",
+                        "id": 0
+                    })
+                ), address_list))
 
-                    for response in await asyncio.gather(*futures):
-                        balance = int(response['result'], 16)
-                        seen_addresses[addr] = balance
-                        # add to queue to process list writes and deletions on a single thread
-                        address_processing_queue.put((addr, balance))
+                for response in await asyncio.gather(*futures):
+                    balance = int(response['result'], 16)
+                    seen_addresses[addr] = balance
+                    # add to queue to process list writes and deletions on a single thread
+                    address_processing_queue.put((addr, balance))
 
-            addresses_to_fetch_balance = []
-            for tx in txs:
-                # we consider an address active if it sent or received eth in the last year
-                sender = tx["to"]
-                reciever = tx["from"]
-                # TODO check if contract 'eth_getCode'
-                for addr in [sender, reciever]:
-                    if not addr:
-                        continue
-                    if not seen_addresses.get(addr, None):
-                        addresses_to_fetch_balance.append(addr)
+        addresses_to_fetch_balance = []
+        for tx in txs:
+            # we consider an address active if it sent or received eth in the last year
+            sender = tx["to"]
+            reciever = tx["from"]
+            # TODO check if contract 'eth_getCode'
+            for addr in [sender, reciever]:
+                if not addr:
+                    continue
+                if not seen_addresses.get(addr, None):
+                    addresses_to_fetch_balance.append(addr)
 
-            # loop = asyncio.get_event_loop()
-            # loop.run_until_complete(fetch_address_balances(addresses_to_fetch_balance))
-            await fetch_address_balances(addresses_to_fetch_balance)
-            task_queue.task_done()
-            end_process = time.time()
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(fetch_address_balances(addresses_to_fetch_balance))
+        end_process = time.time()
 
-            print('Processing block %d took %d seconds' % (block_number, end_process - start_process))
+        print('Processing block %d took %d seconds' % (block_number, end_process - start_process))
     except:
         traceback.print_exc()
         running = False
@@ -162,7 +153,6 @@ def report_snapshot():
         print("Current Estimated block: %d" % current_estimate_block)
         print("Number of blocks processed since last snapshot: %d" % (current_estimate_block - last_reported_block))
         print("Running rate: %d blocks per second" % (float(current_estimate_block - last_reported_block) / sleep_time))
-        print("Size of task queue: %d" % task_queue.qsize())
         print("Size of address queue: %d" % address_processing_queue.qsize())
         last_reported_block = current_estimate_block
         write_results_to_csv()
@@ -176,14 +166,6 @@ def write_results_to_csv():
     address_writer.writerow([start_block])
     for hodler in reversed(current_address_list):
         address_writer.writerow(hodler.as_list())
-
-def stop_queue_on_error():
-    while running:
-        pass
-
-    # stop queue safely
-    with task_queue.mutex:
-        task_queue.queue.clear()
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
@@ -216,38 +198,23 @@ if __name__ == "__main__":
         end_block = int(rpc_request(requests.Session(), BLOCK_NUMBER, []), 16)
 
     # create task queue of size of all blocks
-    task_queue = Queue(end_block - start_block)
     address_processing_queue = Queue(end_block - start_block)
     # set last_reported_block for first estimate
     last_reported_block = start_block
+
     # start threads
-
-    # worker threads processing blocks (making rpc calls)
-    for i in range(THREAD_COUNT):
-        t = Thread(target=process_block)
-        t.daemon = True
-        t.start()
-
     # list maintanence thread
     list_worker = Thread(target=process_address_tuple)
     list_worker.daemon = True
     list_worker.start()
-
-    # worker to stop threads if there is an error
-    error_worker = Thread(target=stop_queue_on_error)
-    error_worker.daemon = True
-    error_worker.start()
-
-    for i in range(start_block, end_block):
-        # do the work
-        task_queue.put(i)
-
     # thread for reporting
     reporter_thread = Thread(target=report_snapshot)
     reporter_thread.daemon = True
     reporter_thread.start()
 
-    task_queue.join()
+    for i in range(start_block, end_block):
+        # do the work
+        process_block(i)
 
     if error:
         print("There was an error while processing the queue")
