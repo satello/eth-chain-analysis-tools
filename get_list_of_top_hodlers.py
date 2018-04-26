@@ -4,6 +4,7 @@ import bisect
 import requests
 import json
 import time
+import datetime
 import argparse
 import traceback
 from threading import Thread
@@ -56,10 +57,13 @@ def rpc_request(method, params = [], key = None):
         "id": 0
     }
 
+    request_start = time.time()
     res = requests.post(
           URL,
           data=json.dumps(payload),
           headers={"content-type": "application/json"}).json()
+    request_end = time.time()
+    print('%s took %d seconds' % (request_end - request_start))
 
     if not res.get('result'):
         running = False
@@ -97,6 +101,7 @@ def process_block():
     global address_processing_queue
     try:
         while running:
+            start_process = time.time()
             block_number = task_queue.get()
             current_estimate_block = block_number
             txs = rpc_request(method=GET_BLOCK, params=[hex(block_number), True], key='transactions')
@@ -115,6 +120,9 @@ def process_block():
                         # add to queue to process list writes and deletions on a single thread
                         address_processing_queue.put((addr, balance))
             task_queue.task_done()
+            end_process = time.time()
+
+            print('Processing block took %d seconds' % (end_process - start_process))
     except:
         traceback.print_exc()
         running = False
