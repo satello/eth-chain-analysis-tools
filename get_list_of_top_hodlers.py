@@ -5,6 +5,7 @@ import requests
 import json
 import time
 import argparse
+import traceback
 from threading import Thread
 from queue import Queue
 
@@ -82,8 +83,7 @@ def process_address_tuple():
                 bisect.insort(sorted_list, hodler) # insert hodler
             address_processing_queue.task_done()
     except:
-        error = sys.exc_info()[0]
-        print(error)
+        traceback.print_exc()
         running = False
 
 def process_block():
@@ -108,8 +108,7 @@ def process_block():
                         address_processing_queue.put((addr, balance))
             task_queue.task_done()
     except:
-        error = sys.exc_info()[0]
-        print(error)
+        traceback.print_exc()
         running = False
 
 # thread that reports on the progress every n seconds
@@ -145,17 +144,6 @@ def stop_queue_on_error():
         task_queue.queue.clear()
 
 if __name__ == "__main__":
-    global seen_addresses
-    global sorted_list
-    global task_queue
-    global address_processing_queue
-    global end_block
-    global start_block
-    global current_estimate_block
-    global last_reported_block
-    global running
-    global error
-
     ap = argparse.ArgumentParser()
     ap.add_argument('-c', '--csv', required = False, help = 'Subscribers CSV to cross reference')
     ap.add_argument('-s', '--start', required = True, help = 'CSV of twitter followers screen names')
