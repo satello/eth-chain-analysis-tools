@@ -123,7 +123,10 @@ def process_block(block_number):
                 ), address_list))
 
                 for response in await asyncio.gather(*futures):
-                    balance = int(response['result'], 16)
+                    print(response.request)
+                    print(response.request.data)
+                    resp = response.json()
+                    balance = int(resp['result'], 16)
                     seen_addresses[addr] = balance
                     # add to queue to process list writes and deletions on a single thread
                     address_processing_queue.put((addr, balance))
