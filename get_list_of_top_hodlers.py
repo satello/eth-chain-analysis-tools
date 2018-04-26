@@ -68,38 +68,49 @@ def rpc_request(method, params = [], key = None):
 
 # Queue the deletion and insertion of addresses so we don't run into any race conditions
 def process_address_tuple():
-    address_tuple = address_processing_queue.get()
-    address = address_tuple[0]
-    balance = address_tuple[1]
-    if balance > 0 and (
-        len(sorted_list) < NUMBER_OF_HOLDERS or balance > sorted_list[0].balance
-    ):
-        if len(sorted_list) >= NUMBER_OF_HOLDERS:
-            del sorted_list[0] # remove first item in list
-        hodler = Hodler(address, balance) # create new hodler
-        bisect.insort(sorted_list, hodler) # insert hodler
-    address_processing_queue.task_done()
+    try:
+        while running:
+            address_tuple = address_processing_queue.get()
+            address = address_tuple[0]
+            balance = address_tuple[1]
+            if balance > 0 and (
+                len(sorted_list) < NUMBER_OF_HOLDERS or balance > sorted_list[0].balance
+            ):
+                if len(sorted_list) >= NUMBER_OF_HOLDERS:
+                    del sorted_list[0] # remove first item in list
+                hodler = Hodler(address, balance) # create new hodler
+                bisect.insort(sorted_list, hodler) # insert hodler
+            address_processing_queue.task_done()
+    except:
+        error = sys.exc_info()[0]
+        print(error)
+        running = False
 
 def process_block():
-    while running:
-        block_number = task_queue.get()
-        current_estimate_block = block_number
-        txs = rpc_request(method=GET_BLOCK, params=[hex(block_number), True], key='transactions')
-        for tx in txs:
-            # we consider an address active if it sent or received eth in the last year
-            sender = tx["to"]
-            reciever = tx["from"]
-            # TODO check if contract 'eth_getCode'
-            for addr in [sender, reciever]:
-                if not addr:
-                    continue
-                if not seen_addresses.get(addr, None):
-                    # We haven't seen this address yet, add to list
-                    balance = int(rpc_request(method=GET_BALANCE, params=[addr, hex(end_block)]), 16)
-                    seen_addresses[addr] = balance
-                    # add to queue to process list writes and deletions on a single thread
-                    address_processing_queue.put((addr, balance))
-        task_queue.task_done()
+    try:
+        while running:
+            block_number = task_queue.get()
+            current_estimate_block = block_number
+            txs = rpc_request(method=GET_BLOCK, params=[hex(block_number), True], key='transactions')
+            for tx in txs:
+                # we consider an address active if it sent or received eth in the last year
+                sender = tx["to"]
+                reciever = tx["from"]
+                # TODO check if contract 'eth_getCode'
+                for addr in [sender, reciever]:
+                    if not addr:
+                        continue
+                    if not seen_addresses.get(addr, None):
+                        # We haven't seen this address yet, add to list
+                        balance = int(rpc_request(method=GET_BALANCE, params=[addr, hex(end_block)]), 16)
+                        seen_addresses[addr] = balance
+                        # add to queue to process list writes and deletions on a single thread
+                        address_processing_queue.put((addr, balance))
+            task_queue.task_done()
+    except:
+        error = sys.exc_info()[0]
+        print(error)
+        running = False
 
 # thread that reports on the progress every n seconds
 def report_snapshot():
@@ -134,6 +145,17 @@ def stop_queue_on_error():
         task_queue.queue.clear()
 
 if __name__ == "__main__":
+    global seen_addresses
+    global sorted_list
+    global task_queue
+    global address_processing_queue
+    global end_block
+    global start_block
+    global current_estimate_block
+    global last_reported_block
+    global running
+    global error
+
     ap = argparse.ArgumentParser()
     ap.add_argument('-c', '--csv', required = False, help = 'Subscribers CSV to cross reference')
     ap.add_argument('-s', '--start', required = True, help = 'CSV of twitter followers screen names')
