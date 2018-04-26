@@ -69,6 +69,9 @@ def rpc_request(method, params = [], key = None):
 
 # Queue the deletion and insertion of addresses so we don't run into any race conditions
 def process_address_tuple():
+    global running
+    global address_processing_queue
+    global sorted_list
     try:
         while running:
             address_tuple = address_processing_queue.get()
@@ -87,6 +90,11 @@ def process_address_tuple():
         running = False
 
 def process_block():
+    global running
+    global task_queue
+    global current_estimate_block
+    global seen_addresses
+    global address_processing_queue
     try:
         while running:
             block_number = task_queue.get()
