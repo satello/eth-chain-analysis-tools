@@ -50,7 +50,7 @@ if __name__ == "__main__":
     address_list = []
 
     # fetch all the blocks (I hope we don't run out of memory!)
-    async def fetch_blocks():
+    async def fetch_blocks(block_range):
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
             loop = asyncio.get_event_loop()
             futures = [loop.run_in_executor(
@@ -66,7 +66,7 @@ if __name__ == "__main__":
                         "id": 0
                     })
                 )
-            ) for i in range(start_block, end_block)]
+            ) for i in block_range]
 
             for response in await asyncio.gather(*futures):
                 resp = response.json()
