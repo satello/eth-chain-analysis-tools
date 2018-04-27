@@ -99,7 +99,10 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
     start_time = time.time()
-    loop.run_until_complete(fetch_blocks())
+    chunk_divisor = 50
+    for i in range((end_block - start_block) / chunk_divisor)
+        start_place = start_block + (i * chunk_divisor)
+        loop.run_until_complete(fetch_blocks(list(range(start_place, start_place + chunk_divisor))))
     loop.run_until_complete(process_blocks(block_list))
     end_time = time.time()
     print("Took %d seconds to fetch addresses from %d blocks" % (end_time - start_time, end_block - start_block))
