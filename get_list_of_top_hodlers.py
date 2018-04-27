@@ -9,7 +9,7 @@ import traceback
 import asyncio
 import functools
 import concurrent.futures
-from threading import Thread
+from multiprocessing import Process
 from queue import Queue
 
 # constants
@@ -218,17 +218,14 @@ if __name__ == "__main__":
 
     # start threads
     # list maintanence thread
-    list_worker = Thread(target=process_address_tuple)
-    list_worker.daemon = True
+    list_worker = Process(target=process_address_tuple)
     list_worker.start()
     # worker threads (async)
     for i in range(THREADS):
-        t = Thread(target=process_block)
-        t.daemon = True
+        t = Process(target=process_block)
         t.start()
     # thread for reporting
-    reporter_thread = Thread(target=report_snapshot)
-    reporter_thread.daemon = True
+    reporter_thread = Process(target=report_snapshot)
     reporter_thread.start()
 
     for i in range(start_block, end_block):
