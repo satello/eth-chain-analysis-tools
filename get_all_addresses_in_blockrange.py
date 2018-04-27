@@ -100,7 +100,7 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     start_time = time.time()
     chunk_divisor = 50
-    for i in range((end_block - start_block) / chunk_divisor)
+    for i in range((end_block - start_block) / chunk_divisor):
         start_place = start_block + (i * chunk_divisor)
         loop.run_until_complete(fetch_blocks(list(range(start_place, start_place + chunk_divisor))))
     loop.run_until_complete(process_blocks(block_list))
