@@ -125,8 +125,10 @@ if __name__ == "__main__":
             ) for i in range(start_block, end_block)]
 
             for response in await asyncio.gather(*futures):
-                resp = response.json()['results']
-                for tx in resp['transactions']:
+                resp = response.json()
+                if not resp.get('results'):
+                    raise RuntimeError(resp)
+                for tx in resp['results']['transactions']:
                     sender = tx["to"]
                     reciever = tx["from"]
                     # TODO check if contract 'eth_getCode'
