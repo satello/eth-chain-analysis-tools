@@ -145,4 +145,4 @@ if __name__ == "__main__":
     address_writer = csv.writer(address_csv, quoting=csv.QUOTE_ALL)
     address_writer.writerow([start_block])
     for addr in address_list:
-        address_writer.writerow(addr)
+        address_writer.writerow([addr])
