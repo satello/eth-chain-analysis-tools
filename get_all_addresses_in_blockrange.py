@@ -46,6 +46,9 @@ if __name__ == "__main__":
         end_block = int(rpc_request(requests.Session(), BLOCK_NUMBER, []), 16)
 
 
+    block_list = []
+    address_list = []
+
     # fetch all the blocks (I hope we don't run out of memory!)
     async def fetch_address():
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
@@ -69,19 +72,35 @@ if __name__ == "__main__":
                 resp = response.json()
                 if not resp.get('result'):
                     raise RuntimeError(resp)
-                for tx in resp['result']['transactions']:
-                    sender = tx["to"]
-                    reciever = tx["from"]
-                    # TODO check if contract 'eth_getCode'
-                    for addr in [sender, reciever]:
-                        if not addr:
-                            continue
-                        if not seen_addresses.get(addr, None):
-                            address_list.append(addr)
+                block_list.append(resp['result'])
+
+    async def process_blocks(blocks):
+        def _process_block(block):
+            for tx in block['transactions']:
+                sender = tx["to"]
+                reciever = tx["from"]
+                # TODO check if contract 'eth_getCode'
+                for addr in [sender, reciever]:
+                    if not addr:
+                        continue
+                    if not seen_addresses.get(addr, None):
+                        seen_addresses[addr] = True
+                        address_list.append(addr)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            loop = asyncio.get_event_loop()
+            tasks = [loop.run_in_executor(
+                executor,
+                _process_block,
+                block
+            ) for block in blocks]
+
+            await asyncio.wait(tasks)
 
     loop = asyncio.get_event_loop()
     start_time = time.time()
-    loop.run_until_complete(fetch_address())
+    loop.run_until_complete(fetch_blocks())
+    loop.run_until_complete(process_blocks(block_list))
     end_time = time.time()
     print("Took %d seconds to fetch addresses from %d blocks" % (end_time - start_time, end_block - start_block))
 

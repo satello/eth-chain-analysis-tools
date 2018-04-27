@@ -100,10 +100,11 @@ if __name__ == "__main__":
     else:
         end_block = int(rpc_request(requests.Session(), BLOCK_NUMBER, []), 16)
 
+    block_list = []
     address_list = []
 
     # fetch all the blocks (I hope we don't run out of memory!)
-    async def fetch_address():
+    async def fetch_blocks():
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
             loop = asyncio.get_event_loop()
             futures = [loop.run_in_executor(
@@ -125,18 +126,13 @@ if __name__ == "__main__":
                 resp = response.json()
                 if not resp.get('result'):
                     raise RuntimeError(resp)
-                for tx in resp['result']['transactions']:
-                    sender = tx["to"]
-                    reciever = tx["from"]
-                    # TODO check if contract 'eth_getCode'
-                    for addr in [sender, reciever]:
-                        if not addr:
-                            continue
-                        if not seen_addresses.get(addr, None):
-                            address_list.append(addr)
+                block_list.append(resp['result'])
+
+
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(fetch_address())
+    loop.run_until_complete(fetch_blocks())
+    loop.run_until_complete(process_blocks())
 
     address_csv = open(CSV_NAME, 'w')
     address_writer = csv.writer(address_csv, quoting=csv.QUOTE_ALL)
