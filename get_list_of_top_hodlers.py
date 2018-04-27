@@ -106,7 +106,7 @@ if __name__ == "__main__":
     address_list = []
 
     # fetch all the blocks (I hope we don't run out of memory!)
-    async def fetch_address(address_list):
+    async def fetch_address():
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
             loop = asyncio.get_event_loop()
             futures = [loop.run_in_executor(
