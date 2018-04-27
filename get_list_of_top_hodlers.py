@@ -136,6 +136,7 @@ if __name__ == "__main__":
                         if not seen_addresses.get(addr, None):
                             address_list.append(addr)
 
+    loop = asyncio.get_event_loop()
     loop.run_until_complete(fetch_address())
 
     address_csv = open(CSV_NAME, 'w')
